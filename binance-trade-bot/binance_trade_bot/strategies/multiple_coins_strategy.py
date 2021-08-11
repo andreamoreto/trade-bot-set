@@ -17,7 +17,7 @@ class Strategy(AutoTrader):
             f"Current coins: {active_coins} ",
             end="\r",
         )
-
+        self.write_buffer=""
         for coin in active_coins:
             coin_price = self.manager.get_sell_price(coin + self.config.BRIDGE)
 
@@ -33,7 +33,11 @@ class Strategy(AutoTrader):
             # if a jump fails try buying another coin to avoid the next coin takes the bridge value
             if self.failed_buy_order:
                 self.bridge_scout()
-
+        if self.write_ratios :        
+            self.write_ratios=False
+            with open('ratios.txt', 'w') as file:
+                file.write(datetime.now().strftime("%d/%m/%Y %H:%M:%S") + "\n")    
+                file.write(self.write_buffer)
         # no active coin left. buy one.
         if len(active_coins) == 0:
             self.logger.info("No active coin found. Going to buy one. If you want to have more than one coin you just need to buy coins from your coinlist.")

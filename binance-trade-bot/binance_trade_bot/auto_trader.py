@@ -9,7 +9,7 @@ from .config import Config
 from .database import Database, LogScout
 from .logger import Logger
 from .models import Coin, CoinValue, Pair
-
+import operator
 
 class AutoTrader:
     def __init__(self, binance_manager: BinanceAPIManager, database: Database, logger: Logger, config: Config):
@@ -18,6 +18,8 @@ class AutoTrader:
         self.logger = logger
         self.config = config
         self.failed_buy_order = False
+        self.write_ratios = False
+        self.write_buffer=""        
 
     def initialize(self):
         self.initialize_trade_thresholds()
@@ -150,6 +152,11 @@ class AutoTrader:
             ratio_dict[pair] = (1 - transaction_fee) * coin_opt_coin_ratio / pair.ratio - self.config.SCOUT_MULTIPLIER / 100 - 1
             ##### END Bamooxa's mod #####
         self.db.batch_log_scout(scout_logs)
+        
+        if self.write_ratios:
+            ratio_dict_sorted=sorted(ratio_dict.items(), key=operator.itemgetter(1),reverse=True)
+            self.write_buffer=self.write_buffer+str(ratio_dict_sorted)
+            
         return (ratio_dict, prices)
 
     def _jump_to_best_coin(self, coin: Coin, coin_price: float, excluded_coins: List[Coin] = []):
@@ -212,3 +219,4 @@ class AutoTrader:
             cv = CoinValue(coin, balance, usd_value, btc_value, datetime=now)
             cv_batch.append(cv)
         self.db.batch_update_coin_values(cv_batch)
+        self.write_ratios=True
